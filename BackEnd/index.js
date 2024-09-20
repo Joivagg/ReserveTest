@@ -68,6 +68,37 @@ app.post("/reservations", (req, res) => {
     });
   });
 
+// Create a new reservation
+app.post("/reservations", (req, res) => {
+    const { client_id, service_id, date, status } = req.body;
+    const sql = `
+      INSERT INTO reservations (client_id, service_id, date, status)
+      VALUES (?, ?, ?, ?)
+    `;
+    db.run(sql, [client_id, service_id, date, status], function (err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ id: this.lastID });
+    });
+});
+
+// Retrieve every reservation
+app.get("/reservations", (req, res) => {
+    const sql = `
+      SELECT reservations.id, clients.name AS client, services.name AS service, date, status
+      FROM reservations
+      JOIN clients ON reservations.client_id = clients.id
+      JOIN services ON reservations.service_id = services.id
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ reservationss: rows });
+    });
+});
+
 // Server setup
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
