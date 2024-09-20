@@ -1,21 +1,22 @@
-CREATE TABLE IF NOT EXISTS clientes (
+CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL,
-  email TEXT NOT NULL
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS servicios (
+CREATE TABLE IF NOT EXISTS services (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL,
-  descripcion TEXT
+  name TEXT NOT NULL,
+  description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS reservas (
+CREATE TABLE IF NOT EXISTS reservations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER,
-  servicio_id INTEGER,
-  fecha TEXT,
-  estado TEXT,
-  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-  FOREIGN KEY (servicio_id) REFERENCES servicios(id)
+  client_id INTEGER,
+  service_id INTEGER,
+  date TEXT,
+  status TEXT,
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  FOREIGN KEY (service_id) REFERENCES services(id)
 );

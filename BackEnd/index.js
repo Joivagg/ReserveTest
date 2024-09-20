@@ -3,18 +3,11 @@ const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-// Swagger setup
-const swaggerOptions = {
-    swaggerDefinition: {
-        info: {
-            title: 'Sistema de Reservas API',
-            version: '1.0.0',
-            description: 'API para gestionar reservas de un sistema de reservas',
-        },
-    },
-    apis: ['index.js'], // Archivos donde están documentados los endpoints
-};
+// JWT secret key
+const JWT_SECRET = "ftpi_q825hnWESA_1s83Q";
 
 // Express initialization
 const app = express();
@@ -35,7 +28,8 @@ db.serialize(() => {
         CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            email TEXT NOT NULL
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
         )
     `);
 
@@ -109,7 +103,7 @@ app.get("/reservations", (req, res) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
-        res.json({ reservationss: rows });
+        res.json({ reservations: rows });
     });
 });
 
@@ -141,6 +135,69 @@ app.delete("/reservations/:id", (req, res) => {
         res.json({ message: "Reservation successfully deleted" });
     });
 });
+
+// Register a new client
+app.post("/client", async (req, res) => {
+
+    const { name, email, password } = req.body;
+
+    // Validate that a client with the same email doesn't exist yet
+    const userExists = db.get(`SELECT * FROM clients WHERE email = ?`, [email]);
+    if (userExists) {
+        return res.status(400).json({ error: "The client is already registered" });
+    }
+
+    // Encrypt password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new client into the database
+    db.run(
+        `INSERT INTO clients (name, email, password) VALUES (?, ?, ?)`,
+        [name, email, hashedPassword],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ message: "User registered successfully" });
+        }
+    );
+});
+
+// Client login
+app.post("/login", (req, res) => {
+    const { email, password } = req.body;
+
+    db.get(`SELECT * FROM clients WHERE email = ?`, [email], async (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (!user) {
+            return res.status(400).json({ error: "Client not found" });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(400).json({ error: "Wrong password" });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
+        res.json({ token });
+    });
+});
+
+// Swagger setup
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            title: 'API Reservation System',
+            version: '1.0.0',
+            description: 'REST API to handle the reservations data',
+        },
+    },
+    apis: ['index.js']
+};
 
 // Set swagger documentation
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
