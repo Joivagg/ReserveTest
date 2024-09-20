@@ -144,8 +144,8 @@ app.post("/client", async (req, res) => {
     const { name, email, password } = req.body;
 
     // Validate that a client with the same email doesn't exist yet
-    const userExists = db.get(`SELECT * FROM clients WHERE email = ?`, [email]);
-    if (userExists) {
+    const clientExists = db.get(`SELECT * FROM clients WHERE email = ?`, [email]);
+    if (clientExists) {
         return res.status(400).json({ error: "The client is already registered" });
     }
 
@@ -160,7 +160,7 @@ app.post("/client", async (req, res) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
             }
-            res.status(201).json({ message: "User registered successfully" });
+            res.status(201).json({ message: "Client registered successfully" });
         }
     );
 });
@@ -169,22 +169,22 @@ app.post("/client", async (req, res) => {
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
 
-    db.get(`SELECT * FROM clients WHERE email = ?`, [email], async (err, user) => {
+    db.get(`SELECT * FROM clients WHERE email = ?`, [email], async (err, client) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
 
-        if (!user) {
+        if (!client) {
             return res.status(400).json({ error: "Client not found" });
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcrypt.compare(password, client.password);
         if (!validPassword) {
             return res.status(400).json({ error: "Wrong password" });
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
+        const token = jwt.sign({ id: client.id, email: client.email }, JWT_SECRET, { expiresIn: "1h" });
         res.json({ token });
     });
 });
@@ -240,11 +240,86 @@ const swaggerOptions = {
         info: {
             title: 'API Reservation System',
             version: '1.0.0',
-            description: 'REST API to handle the reservations data',
+            description: 'REST API to handle the reservations data with clients and services',
         },
     },
     apis: ['index.js']
 };
+
+// Swagger doc for /client
+/**
+ * @swagger
+ * /client:
+ *   post:
+ *     summary: Register a new client
+ *     parameters:
+ *       - name: name
+ *         description: Client's name
+ *         in: body
+ *         required: true
+ *         type: string
+ *       - name: email
+ *         description: Client's email
+ *         in: body
+ *         required: true
+ *         type: string
+ *       - name: password
+ *         description: Client's password
+ *         in: body
+ *         required: true
+ *         type: string
+ *     responses:
+ *       201:
+ *         description: Client successfully registered
+ *       400:
+ *         description: The client already exists
+ */
+
+// Swagger doc for /login
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Login into the reservation system
+ *     parameters:
+ *       - name: email
+ *         description: Client's email
+ *         in: body
+ *         required: true
+ *         type: string
+ *       - name: password
+ *         description: Client's password
+ *         in: body
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: JWT token created
+ *       400:
+ *         description: Client not found or wrong password
+ */
+
+// Swagger doc for /services
+/**
+ * @swagger
+ * /services:
+ *   post:
+ *     summary: Create a new service
+ *     parameters:
+ *       - name: name
+ *         description: Name of the service
+ *         in: body
+ *         required: true
+ *         type: string
+ *       - name: description
+ *         description: Description of the service
+ *         in: body
+ *         required: false
+ *         type: string
+ *     responses:
+ *       201:
+ *         description: Service successfully created
+ */
 
 // Set swagger documentation
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
