@@ -56,28 +56,30 @@ db.serialize(() => {
     console.log("Tables created successfully.");
 });
 
+// Middleware para verificar el token JWT
+function verifyToken(req, res, next) {
+    const token = req.headers["authorization"];
+
+    if (!token) {
+        return res.status(401).json({ error: "Denied Access" });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: "Invalid Token" });
+        }
+        req.user = decoded;
+        next();
+    });
+}
+
 // Endpoint base
 app.get("/", (req, res) => {
     res.send("Reservation System API");
 });
 
 // Create a new reservation
-app.post("/reservations", (req, res) => {
-    const { client_id, service_id, date, status } = req.body;
-    const sql = `
-      INSERT INTO reservations (client_id, service_id, date, status)
-      VALUES (?, ?, ?, ?)
-    `;
-    db.run(sql, [client_id, service_id, date, status], function (err) {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.status(201).json({ id: this.lastID });
-    });
-});
-
-// Create a new reservation
-app.post("/reservations", (req, res) => {
+app.post("/reservations", verifyToken, (req, res) => {
     const { client_id, service_id, date, status } = req.body;
     const sql = `
       INSERT INTO reservations (client_id, service_id, date, status)
@@ -92,7 +94,7 @@ app.post("/reservations", (req, res) => {
 });
 
 // Retrieve every reservation
-app.get("/reservations", (req, res) => {
+app.get("/reservations", verifyToken, (req, res) => {
     const sql = `
       SELECT reservations.id, clients.name AS client, services.name AS service, date, status
       FROM reservations
@@ -108,7 +110,7 @@ app.get("/reservations", (req, res) => {
 });
 
 // Modify an existing reservation
-app.put("/reservations/:id", (req, res) => {
+app.put("/reservations/:id", verifyToken, (req, res) => {
     const { client_id, service_id, date, status } = req.body;
     const { id } = req.params;
     const sql = `
@@ -125,7 +127,7 @@ app.put("/reservations/:id", (req, res) => {
 });
 
 // Delete a reservation
-app.delete("/reservations/:id", (req, res) => {
+app.delete("/reservations/:id", verifyToken, (req, res) => {
     const { id } = req.params;
     const sql = `DELETE FROM reservations WHERE id = ?`;
     db.run(sql, id, function (err) {
@@ -184,6 +186,51 @@ app.post("/login", (req, res) => {
         // Generate JWT token
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
         res.json({ token });
+    });
+});
+
+// Create a new service
+app.post("/services", verifyToken, (req, res) => {
+    const { name, description } = req.body;
+
+    db.run(
+        `INSERT INTO services (name, description) VALUES (?, ?)`,
+        [name, description],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ id: this.lastID });
+        }
+    );
+});
+
+// Modify an existing service
+app.put("/services/:id", verifyToken, (req, res) => {
+    const { name, description } = req.body;
+    const { id } = req.params;
+
+    db.run(
+        `UPDATE services SET name = ?, description = ? WHERE id = ?`,
+        [name, description, id],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ message: "Updated service" });
+        }
+    );
+});
+
+// Delete a service
+app.delete("/services/:id", verifyToken, (req, res) => {
+    const { id } = req.params;
+
+    db.run(`DELETE FROM services WHERE id = ?`, [id], function (err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Deleted service" });
     });
 });
 
