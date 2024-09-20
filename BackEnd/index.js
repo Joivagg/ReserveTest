@@ -1,10 +1,12 @@
+// Modules Import
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
-const app = express();
 
+// Express initialization
+const app = express();
 app.use(express.json());
 
-// Conexión a la base de datos
+// Database connection
 const db = new sqlite3.Database("./reservations.db", (err) => {
     if (err) {
         console.error("Error after trying to connect with SQLite:", err.message);
@@ -13,6 +15,7 @@ const db = new sqlite3.Database("./reservations.db", (err) => {
     }
 });
 
+// Database initialization
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS clients (
@@ -50,6 +53,22 @@ app.get("/", (req, res) => {
     res.send("Reservation System API");
 });
 
+// Create a new reservation
+app.post("/reservations", (req, res) => {
+    const { client_id, service_id, date, status } = req.body;
+    const sql = `
+      INSERT INTO reservations (client_id, service_id, date, status)
+      VALUES (?, ?, ?, ?)
+    `;
+    db.run(sql, [client_id, service_id, date, status], function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.status(201).json({ id: this.lastID });
+    });
+  });
+
+// Server setup
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running in port ${PORT}`);
