@@ -1,6 +1,20 @@
 // Modules Import
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+
+// Swagger setup
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            title: 'Sistema de Reservas API',
+            version: '1.0.0',
+            description: 'API para gestionar reservas de un sistema de reservas',
+        },
+    },
+    apis: ['index.js'], // Archivos donde están documentados los endpoints
+};
 
 // Express initialization
 const app = express();
@@ -127,6 +141,10 @@ app.delete("/reservations/:id", (req, res) => {
         res.json({ message: "Reservation successfully deleted" });
     });
 });
+
+// Set swagger documentation
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Server setup
 const PORT = process.env.PORT || 3000;
