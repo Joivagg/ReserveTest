@@ -61,12 +61,12 @@ app.post("/reservations", (req, res) => {
       VALUES (?, ?, ?, ?)
     `;
     db.run(sql, [client_id, service_id, date, status], function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ id: this.lastID });
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ id: this.lastID });
     });
-  });
+});
 
 // Create a new reservation
 app.post("/reservations", (req, res) => {
@@ -96,6 +96,35 @@ app.get("/reservations", (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         res.json({ reservationss: rows });
+    });
+});
+
+// Modify an existing reservation
+app.put("/reservations/:id", (req, res) => {
+    const { client_id, service_id, date, status } = req.body;
+    const { id } = req.params;
+    const sql = `
+      UPDATE reservations
+      SET client_id = ?, service_id = ?, date = ?, status = ?
+      WHERE id = ?
+    `;
+    db.run(sql, [client_id, service_id, date, status, id], function (err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Reservation successfully updated." });
+    });
+});
+
+// Delete a reservation
+app.delete("/reservations/:id", (req, res) => {
+    const { id } = req.params;
+    const sql = `DELETE FROM reservations WHERE id = ?`;
+    db.run(sql, id, function (err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Reservation successfully deleted" });
     });
 });
 
